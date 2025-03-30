@@ -48,6 +48,34 @@ def create_asana_task(task_name, due_on="today"):
   except ApiException as e:
     return f"Exception when calling TasksApi -> create_task: {e}"
 
+
+def get_tools():
+  tools = [
+    {
+      "type": "function",
+      "function": {
+        "name": "create_asana_task",
+        "description": "Creates a task in Asana given the name of the task and when it is due",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "task_name": {
+              "type": "string",
+              "description": "The name of the task in Asana"
+            },
+            "due_on": {
+              "type": "string",
+              "description": "The date the task is due in the format YYYY-MM-DD. If not given, the current day is used"
+            },
+          },
+          "required": ["task_name"]
+        },
+      },
+    }
+  ]
+
+  return tools
+
 def main():
   messages = [
     {
