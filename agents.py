@@ -76,6 +76,53 @@ def get_tools():
 
   return tools
 
+
+def prompt_ai(messages):
+  # First, prompt the AI with the latest user message
+  completion = client.chat.completions.create(
+    model=model,
+    messages=messages,
+    tools=get_tools()
+  )
+
+  response_message = completion.choices[0].message
+  tool_calls = response_message.tool_calls
+
+  # Second, see if the AI decided it needs to invoke a tool
+  if tool_calls:
+    # If the AI decided to invoke a tool, invoke it
+    available_functions = {
+        "create_asana_task": create_asana_task
+    }
+
+    # Add the tool request to the list of messages so the AI knows later it invoked the tool
+    messages.append(response_message)
+
+    # Next, for each tool the AI wanted to call, call it and add the tool result to the list of messages
+    for tool_call in tool_calls:
+      function_name = tool_call.function.name
+      function_to_call = available_functions[function_name]
+      function_args = json.loads(tool_call.function.arguments)
+      function_response = function_to_call(**function_args)
+
+      messages.append({
+          "tool_call_id": tool_call.id,
+          "role": "tool",
+          "name": function_name,
+          "content": function_response
+      })
+
+    # Call the AI again so it can produce a response with the result of calling the tool(s)
+    second_response = client.chat.completions.create(
+      model=model,
+      messages=messages,
+    )
+
+    return second_response.choices[0].message.content
+
+  return response_message.content
+  
+
 def main():
   messages = [
     {
