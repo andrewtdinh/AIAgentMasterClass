@@ -1,4 +1,3 @@
-import asana
 
 def main():
   print('main')
