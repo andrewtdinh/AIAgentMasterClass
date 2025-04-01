@@ -7,6 +7,11 @@ from datetime import datetime
 import json
 import os
 
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+
 load_dotenv()
 
 client = OpenAI()
@@ -18,6 +23,7 @@ api_client = asana.ApiClient(configuration)
 
 tasks_api_instance = asana.TasksApi(api_client)
 
+@tool
 def create_asana_task(task_name, due_on="today"):
   """
   Creates a task in Asana given the name of the task and when it is due
@@ -49,44 +55,14 @@ def create_asana_task(task_name, due_on="today"):
     return f"Exception when calling TasksApi -> create_task: {e}"
 
 
-def get_tools():
-  tools = [
-    {
-      "type": "function",
-      "function": {
-        "name": "create_asana_task",
-        "description": "Creates a task in Asana given the name of the task and when it is due",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "task_name": {
-              "type": "string",
-              "description": "The name of the task in Asana"
-            },
-            "due_on": {
-              "type": "string",
-              "description": "The date the task is due in the format YYYY-MM-DD. If not given, the current day is used"
-            },
-          },
-          "required": ["task_name"]
-        },
-      },
-    }
-  ]
-
-  return tools
-
-
 def prompt_ai(messages):
   # First, prompt the AI with the latest user message
-  completion = client.chat.completions.create(
-    model=model,
-    messages=messages,
-    tools=get_tools()
-  )
+  tools = [create_asana_task]
+  asana_chatbot = ChatOpenAI(model=model)
+  asana_chatbot_with_tools = asana_chatbot.bind_tools(tools)
 
-  response_message = completion.choices[0].message
-  tool_calls = response_message.tool_calls
+  ai_response = asana_chatbot_with_tools.invoke(messages)
+  tool_calls = len(ai_response.tool_calls) > 0
 
   # Second, see if the AI decided it needs to invoke a tool
   if tool_calls:
@@ -96,39 +72,24 @@ def prompt_ai(messages):
     }
 
     # Add the tool request to the list of messages so the AI knows later it invoked the tool
-    messages.append(response_message)
+    messages.append(ai_response)
 
     # Next, for each tool the AI wanted to call, call it and add the tool result to the list of messages
-    for tool_call in tool_calls:
-      function_name = tool_call.function.name
-      function_to_call = available_functions[function_name]
-      function_args = json.loads(tool_call.function.arguments)
-      function_response = function_to_call(**function_args)
-
-      messages.append({
-          "tool_call_id": tool_call.id,
-          "role": "tool",
-          "name": function_name,
-          "content": function_response
-      })
+    for tool_call in ai_response.tool_calls:
+      tool_name = tool_call["name"].lower()
+      selected_tool = available_functions[tool_name]
+      tool_output = selected_tool.invoke(tool_call["args"])
+      messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))
 
     # Call the AI again so it can produce a response with the result of calling the tool(s)
-    second_response = client.chat.completions.create(
-      model=model,
-      messages=messages,
-    )
+    ai_response = asana_chatbot_with_tools.invoke(messages)
 
-    return second_response.choices[0].message.content
-
-  return response_message.content
+  return ai_response
   
 
 def main():
   messages = [
-    {
-      "role": "system",
-      "content": f"You are a personal assistant who helps manage tasks in Asana. The current date is: {datetime.now().date()}"
-    }
+    SystemMessage(content=f"You are a personal assistant who helps manage tasks in Asana. The current date is: {datetime.now().date()}")
   ]
 
   while True:
@@ -137,11 +98,11 @@ def main():
     if user_input == 'q':
       break
 
-    messages.append({"role": "user", "content": user_input})
+    messages.append(HumanMessage(content=user_input))
     ai_response = prompt_ai(messages)
 
-    print(ai_response)
-    messages.append({"role": "assistant", "content": ai_response})
+    print(ai_response.content)
+    messages.append(ai_response)
 
 if __name__ == "__main__":
   main()
