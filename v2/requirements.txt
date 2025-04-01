@@ -1,6 +1,5 @@
-// cspell:disable
 asana==5.0.0
-openai==1.10.0
+openai>=1.26.0
 python-dotenv==0.13.0
 langchain==0.2.6
 langchain-anthropic==0.1.16
