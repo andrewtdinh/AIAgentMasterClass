@@ -4,6 +4,7 @@ from asana.rest import ApiException
 from openai import OpenAI
 from dotenv import load_dotenv
 from datetime import datetime
+import streamlit as st
 import json
 import os
 
@@ -88,21 +89,25 @@ def prompt_ai(messages):
   
 
 def main():
-  messages = [
-    SystemMessage(content=f"You are a personal assistant who helps manage tasks in Asana. The current date is: {datetime.now().date()}")
-  ]
+  st.title("Asana Chatbot")
 
-  while True:
-    user_input = input("Chat with AI (q to quit): ").strip()
+  # Initialize chat history
+  if "messages" not in st.session_state:
+    st.session_state.messages = [
+      SystemMessage(content=f"You are a personal assistant who helps manage tasks in Asana. The current date is: {datetime.now().date()}")
+    ]
 
-    if user_input == 'q':
-      break
+  # Display chat messages from history on app rerun
+  for message in st.session_state.messages:
+    message_json = json.loads(message.json())
+    with st.chat_message(message_json["type"]):
+      st.markdown(message_json["content"])
 
-    messages.append(HumanMessage(content=user_input))
-    ai_response = prompt_ai(messages)
-
-    print(ai_response.content)
-    messages.append(ai_response)
+  # React to user input
+  if prompt := st.chat_input("What would you like to do today?"):
+    # Display user message in chat message container
+    st.chat_message("user").markdown(prompt)
+    
 
 if __name__ == "__main__":
   main()
