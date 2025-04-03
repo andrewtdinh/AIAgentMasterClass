@@ -107,7 +107,16 @@ def main():
   if prompt := st.chat_input("What would you like to do today?"):
     # Display user message in chat message container
     st.chat_message("user").markdown(prompt)
-    
+    # Add user message to chat history
+    st.session_state.messages.append(HumanMessage(content=prompt))
+
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+      ai_response = prompt_ai(st.session_state.messages)
+      st.markdown(ai_response.content)
+
+    st.session_state.messages.append(ai_response)
+
 
 if __name__ == "__main__":
   main()
