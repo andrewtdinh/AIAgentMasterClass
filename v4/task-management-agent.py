@@ -65,6 +65,29 @@ def create_asana_task(task_name, project_gid, due_on="today"):
     return f"Exception when calling TasksApi -> create_task: {e}"
 
 
+@tool
+def get_asana_projects():
+    """
+    Gets all of the projects in the user's Asana workspace
+
+    Returns:
+        str: The API response from getting the projects or an error message if the projects couldn't be fetched.
+        The API response is an array of project objects, where each project object looks like:
+        {'gid': '1207789085525921', 'name': 'Project Name', 'resource_type': 'project'}
+    """    
+    opts = {
+        'limit': 50, # int | Results per page. The number of objects to return per page. The value must be between 1 and 100.
+        'workspace': workspace_gid, # str | The workspace or organization to filter projects on.
+        'archived': False # bool | Only return projects whose `archived` field takes on the value of this parameter.
+    }
+
+    try:
+        api_response = projects_api_instance.get_projects(opts)
+        return json.dumps(list(api_response), indent=2)
+    except ApiException as e:
+        return f"Exception when calling ProjectsApi -> create_project: {e}"
+    
+
 def prompt_ai(messages, nested_calls=0):
   if nested_calls > 5:
     raise "AI is tool calling too much!"
