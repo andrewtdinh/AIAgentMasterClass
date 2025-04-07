@@ -62,7 +62,7 @@ def create_asana_task(task_name, project_gid, due_on="today"):
     api_response = tasks_api_instance.create_task(task_body, {})
     return json.dumps(api_response, indent=2)
   except ApiException as e:
-    return f"Exception when calling TasksApi -> create_task: {e}"
+    return f"Exception when calling TasksApi -> create_task: {e}\n"
 
 
 @tool
@@ -85,8 +85,36 @@ def get_asana_projects():
         api_response = projects_api_instance.get_projects(opts)
         return json.dumps(list(api_response), indent=2)
     except ApiException as e:
-        return f"Exception when calling ProjectsApi -> create_project: {e}"
-    
+        return f"Exception when calling ProjectsApi -> create_project: {e}\n"
+
+
+@tool
+def create_asana_project(project_name, due_on=None):
+    """
+    Creates a project in Asana given the name of the project and optionally when it is due
+
+    Example call:
+
+    create_asana_project("Test Project", "2024-06-24")
+    Args:
+        project_name (str): The name of the project in Asana
+        due_on (str): The date the project is due in the format YYYY-MM-DD. If not supplied, the project is not given a due date
+    Returns:
+        str: The API response of adding the project to Asana or an error message if the API call threw an error
+    """    
+    body = {
+        "data": {
+            "name": project_name, "due_on": due_on, "workspace": workspace_gid
+        }
+    } # dict | The project to create.
+
+    try:
+        # Create a project
+        api_response = projects_api_instance.create_project(body, {})
+        return json.dumps(api_response, indent=2)
+    except ApiException as e:
+        return f"Exception when calling ProjectsApi->create_project: {e}\n"
+
 
 def prompt_ai(messages, nested_calls=0):
   if nested_calls > 5:
