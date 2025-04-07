@@ -22,10 +22,18 @@ configuration = asana.Configuration()
 configuration.access_token = os.getenv('ASANA_ACCESS_TOKEN', '')
 api_client = asana.ApiClient(configuration)
 
+projects_api_instance = asana.ProjectsApi(api_client)
 tasks_api_instance = asana.TasksApi(api_client)
 
+workspace_gid = os.getenv('ASANA_WORKPLACE_ID', '')
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~ AI Agent Tool Functions ~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 @tool
-def create_asana_task(task_name, due_on="today"):
+def create_asana_task(task_name, project_gid, due_on="today"):
   """
   Creates a task in Asana given the name of the task and when it is due
 
@@ -34,6 +42,7 @@ def create_asana_task(task_name, due_on="today"):
   create_asana_task("Test Task", "2024-06-24")
   Args:
       task_name (str): The name of the task in Asana
+      project_gid (str): The ID of the project to add the task to 
       due_on (str): The date the task is due in the format YYYY-MM-DD. If not given, the current day is used
   Returns:
       str: The API response of adding the task to Asana or an error message if the API call threw an error
@@ -45,7 +54,7 @@ def create_asana_task(task_name, due_on="today"):
     "data": {
         "name": task_name,
         "due_on": due_on,
-        "projects": [os.getenv("ASANA_PROJECT_ID", "")]
+        "projects": [project_gid]
     }
   }
 
