@@ -116,6 +116,35 @@ def create_asana_project(project_name, due_on=None):
         return f"Exception when calling ProjectsApi->create_project: {e}\n"
 
 
+@tool
+def get_asana_tasks(project_gid):
+    """
+    Gets all the Asana tasks in a project
+
+    Example call:
+
+    get_asana_tasks("1207789085525921")
+    Args:
+        project_gid (str): The ID of the project in Asana to fetch the tasks for
+    Returns:
+        str: The API response from fetching the tasks for the project in Asana or an error message if the API call threw an error
+        The API response is an array of tasks objects where each task object is in the format:
+        {'gid': '1207780961742158', 'created_at': '2024-07-11T16:25:46.380Z', 'due_on': None or date in format "YYYY-MM-DD", 'name': 'Test Task'}
+    """        
+    opts = {
+        'limit': 50, # int | Results per page. The number of objects to return per page. The value must be between 1 and 100.
+        'project': project_gid, # str | The project to filter tasks on.
+        'opt_fields': "created_at,name,due_on", # list[str] | This endpoint returns a compact resource, which excludes some properties by default. To include those optional properties, set this query parameter to a comma-separated list of the properties you wish to include.
+    }
+
+    try:
+        # Get multiple tasks
+        api_response = tasks_api_instance.get_tasks(opts)
+        return json.dumps(list(api_response), indent=2)
+    except ApiException as e:
+        return f"Exception when calling TasksApi -> get_tasks: {e}\n"
+    
+
 def prompt_ai(messages, nested_calls=0):
   if nested_calls > 5:
     raise "AI is tool calling too much!"
