@@ -172,6 +172,26 @@ def update_asana_task(task_gid, data):
         return f"Exception when calling TasksApi -> update_task: {e}\n"
 
 
+@tool
+def delete_task(task_gid):
+    """
+    Deletes a task in Asana
+
+    Example call:
+
+    delete_task("1207780961742158")
+    Args:
+        task_gid (str): The ID of the task to delete
+    Returns:
+        str: The API response of deleting the task or an error message if the API call threw an error
+    """        
+    try:
+        # Delete a task
+        api_response = tasks_api_instance.delete_task(task_gid)
+        return json.dumps(api_response, indent=2)
+    except ApiException as e:
+        return f"Exception when calling TasksApi->delete_task: {e}\n"
+
 def prompt_ai(messages, nested_calls=0):
   if nested_calls > 5:
     raise "AI is tool calling too much!"
