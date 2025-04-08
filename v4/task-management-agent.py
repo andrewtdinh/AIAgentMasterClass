@@ -270,14 +270,16 @@ def main():
   # Initialize chat history
   if "messages" not in st.session_state:
     st.session_state.messages = [
-      SystemMessage(content=f"You are a personal assistant who helps manage tasks in Asana. The current date is: {datetime.now().date()}")
-    ]
+      SystemMessage(content=system_message)
+    ]    
 
   # Display chat messages from history on app rerun
   for message in st.session_state.messages:
     message_json = json.loads(message.json())
-    with st.chat_message(message_json["type"]):
-      st.markdown(message_json["content"])
+    message_type = message_json["type"]
+    if message_type in ["human", "ai", "system"]:
+      with st.chat_message(message_type):
+        st.markdown(message_json["content"])        
 
   # React to user input
   if prompt := st.chat_input("What would you like to do today?"):
@@ -290,7 +292,7 @@ def main():
     with st.chat_message("assistant"):
       stream = prompt_ai(st.session_state.messages)
       response = st.write_stream(stream)
-
+    
     st.session_state.messages.append(AIMessage(content=response))
 
 
