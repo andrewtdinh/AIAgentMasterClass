@@ -67,53 +67,53 @@ def create_asana_task(task_name, project_gid, due_on="today"):
 
 @tool
 def get_asana_projects():
-    """
-    Gets all of the projects in the user's Asana workspace
+  """
+  Gets all of the projects in the user's Asana workspace
 
-    Returns:
-        str: The API response from getting the projects or an error message if the projects couldn't be fetched.
-        The API response is an array of project objects, where each project object looks like:
-        {'gid': '1207789085525921', 'name': 'Project Name', 'resource_type': 'project'}
-    """    
-    opts = {
-        'limit': 50, # int | Results per page. The number of objects to return per page. The value must be between 1 and 100.
-        'workspace': workspace_gid, # str | The workspace or organization to filter projects on.
-        'archived': False # bool | Only return projects whose `archived` field takes on the value of this parameter.
-    }
+  Returns:
+    str: The API response from getting the projects or an error message if the projects couldn't be fetched.
+    The API response is an array of project objects, where each project object looks like:
+    {'gid': '1207789085525921', 'name': 'Project Name', 'resource_type': 'project'}
+  """    
+  opts = {
+    'limit': 50, # int | Results per page. The number of objects to return per page. The value must be between 1 and 100.
+    'workspace': workspace_gid, # str | The workspace or organization to filter projects on.
+    'archived': False # bool | Only return projects whose `archived` field takes on the value of this parameter.
+  }
 
-    try:
-        api_response = projects_api_instance.get_projects(opts)
-        return json.dumps(list(api_response), indent=2)
-    except ApiException as e:
-        return f"Exception when calling ProjectsApi -> create_project: {e}\n"
+  try:
+    api_response = projects_api_instance.get_projects(opts)
+    return json.dumps(list(api_response), indent=2)
+  except ApiException as e:
+    return f"Exception when calling ProjectsApi -> create_project: {e}\n"
 
 
 @tool
 def create_asana_project(project_name, due_on=None):
-    """
-    Creates a project in Asana given the name of the project and optionally when it is due
+  """
+  Creates a project in Asana given the name of the project and optionally when it is due
 
-    Example call:
+  Example call:
 
-    create_asana_project("Test Project", "2024-06-24")
-    Args:
-        project_name (str): The name of the project in Asana
-        due_on (str): The date the project is due in the format YYYY-MM-DD. If not supplied, the project is not given a due date
-    Returns:
-        str: The API response of adding the project to Asana or an error message if the API call threw an error
-    """    
-    body = {
-        "data": {
-            "name": project_name, "due_on": due_on, "workspace": workspace_gid
-        }
-    } # dict | The project to create.
+  create_asana_project("Test Project", "2024-06-24")
+  Args:
+    project_name (str): The name of the project in Asana
+    due_on (str): The date the project is due in the format YYYY-MM-DD. If not supplied, the project is not given a due date
+  Returns:
+    str: The API response of adding the project to Asana or an error message if the API call threw an error
+  """    
+  body = {
+    "data": {
+      "name": project_name, "due_on": due_on, "workspace": workspace_gid
+    }
+  } # dict | The project to create.
 
-    try:
-        # Create a project
-        api_response = projects_api_instance.create_project(body, {})
-        return json.dumps(api_response, indent=2)
-    except ApiException as e:
-        return f"Exception when calling ProjectsApi->create_project: {e}\n"
+  try:
+    # Create a project
+    api_response = projects_api_instance.create_project(body, {})
+    return json.dumps(api_response, indent=2)
+  except ApiException as e:
+    return f"Exception when calling ProjectsApi->create_project: {e}\n"
 
 
 @tool
@@ -211,44 +211,57 @@ available_functions = {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def prompt_ai(messages, nested_calls=0):
-    if nested_calls > 5:
-        raise "AI is tool calling too much!"
+  if nested_calls > 5:
+    raise "AI is tool calling too much!"
 
-    # First, prompt the AI with the latest user message
-    tools = [tool for _, tool in available_functions.items()]
-    asana_chatbot = ChatOpenAI(model=model) if "gpt" in model.lower() else ChatAnthropic(model=model)
-    asana_chatbot_with_tools = asana_chatbot.bind_tools(tools)
+  # First, prompt the AI with the latest user message
+  tools = [tool for _, tool in available_functions.items()]
+  asana_chatbot = ChatOpenAI(model=model) if "gpt" in model.lower() else ChatAnthropic(model=model)
+  asana_chatbot_with_tools = asana_chatbot.bind_tools(tools)
 
-    stream = asana_chatbot_with_tools.stream(messages)
-    first = True
-    for chunk in stream:
-        if first:
-            gathered = chunk
-            first = False
-        else:
-            gathered = gathered + chunk
+  stream = asana_chatbot_with_tools.stream(messages)
+  first = True
+  for chunk in stream:
+    if first:
+      gathered = chunk
+      first = False
+    else:
+      gathered = gathered + chunk
 
-        yield chunk
+    yield chunk
 
-    has_tool_calls = len(gathered.tool_calls) > 0
+  has_tool_calls = len(gathered.tool_calls) > 0
 
-    # Second, see if the AI decided it needs to invoke a tool
-    if has_tool_calls:
-        # Add the tool request to the list of messages so the AI knows later it invoked the tool
-        messages.append(gathered)
+  # Second, see if the AI decided it needs to invoke a tool
+  if has_tool_calls:
+    # Add the tool request to the list of messages so the AI knows later it invoked the tool
+    messages.append(gathered)
 
-        # If the AI decided to invoke a tool, invoke it
-        # For each tool the AI wanted to call, call it and add the tool result to the list of messages
-        for tool_call in gathered.tool_calls:
-            tool_name = tool_call["name"].lower()
-            selected_tool = available_functions[tool_name]
-            tool_output = selected_tool.invoke(tool_call["args"])
-            messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))                
+    # If the AI decided to invoke a tool, invoke it
+    # For each tool the AI wanted to call, call it and add the tool result to the list of messages
+    for tool_call in gathered.tool_calls:
+      tool_name = tool_call["name"].lower()
+      selected_tool = available_functions[tool_name]
+      tool_output = selected_tool.invoke(tool_call["args"])
+      messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))                
 
-        # Call the AI again so it can produce a response with the result of calling the tool(s)
-        additional_stream = prompt_ai(messages, nested_calls + 1)
-        for additional_chunk in additional_stream:
-            yield additional_chunk
+    # Call the AI again so it can produce a response with the result of calling the tool(s)
+    additional_stream = prompt_ai(messages, nested_calls + 1)
+    for additional_chunk in additional_stream:
+      yield additional_chunk
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~ Main Function with UI Creation ~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+system_message = f"""
+You are a personal assistant who helps manage tasks in Asana. 
+You never give IDs to the user since those are just for you to keep track of. 
+When a user asks to create a task and you don't know the project to add it to for sure, clarify with the user.
+The current date is: {datetime.now().date()}
+"""
 
 
 def main():
