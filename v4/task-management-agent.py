@@ -191,6 +191,18 @@ def delete_task(task_gid):
         return json.dumps(api_response, indent=2)
     except ApiException as e:
         return f"Exception when calling TasksApi->delete_task: {e}\n"
+    
+
+# Maps the function names to the actual function object in the script
+# This mapping will also be used to create the list of tools to bind to the agent
+available_functions = {
+    "create_asana_task": create_asana_task,
+    "get_asana_projects": get_asana_projects,
+    "create_asana_project": create_asana_project,
+    "get_asana_tasks": get_asana_tasks,
+    "update_asana_task": update_asana_task,
+    "delete_task": delete_task
+}     
 
 def prompt_ai(messages, nested_calls=0):
   if nested_calls > 5:
