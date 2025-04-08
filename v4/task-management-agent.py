@@ -174,78 +174,81 @@ def update_asana_task(task_gid, data):
 
 @tool
 def delete_task(task_gid):
-    """
-    Deletes a task in Asana
+  """
+  Deletes a task in Asana
 
-    Example call:
+  Example call:
 
-    delete_task("1207780961742158")
-    Args:
-        task_gid (str): The ID of the task to delete
-    Returns:
-        str: The API response of deleting the task or an error message if the API call threw an error
-    """        
-    try:
-        # Delete a task
-        api_response = tasks_api_instance.delete_task(task_gid)
-        return json.dumps(api_response, indent=2)
-    except ApiException as e:
-        return f"Exception when calling TasksApi->delete_task: {e}\n"
+  delete_task("1207780961742158")
+  Args:
+      task_gid (str): The ID of the task to delete
+  Returns:
+      str: The API response of deleting the task or an error message if the API call threw an error
+  """        
+  try:
+    # Delete a task
+    api_response = tasks_api_instance.delete_task(task_gid)
+    return json.dumps(api_response, indent=2)
+  except ApiException as e:
+    return f"Exception when calling TasksApi->delete_task: {e}\n"
     
 
 # Maps the function names to the actual function object in the script
 # This mapping will also be used to create the list of tools to bind to the agent
 available_functions = {
-    "create_asana_task": create_asana_task,
-    "get_asana_projects": get_asana_projects,
-    "create_asana_project": create_asana_project,
-    "get_asana_tasks": get_asana_tasks,
-    "update_asana_task": update_asana_task,
-    "delete_task": delete_task
+  "create_asana_task": create_asana_task,
+  "get_asana_projects": get_asana_projects,
+  "create_asana_project": create_asana_project,
+  "get_asana_tasks": get_asana_tasks,
+  "update_asana_task": update_asana_task,
+  "delete_task": delete_task
 }     
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~ AI Prompting Function ~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 def prompt_ai(messages, nested_calls=0):
-  if nested_calls > 5:
-    raise "AI is tool calling too much!"
-  # First, prompt the AI with the latest user message
-  tools = [create_asana_task]
-  asana_chatbot = ChatOpenAI(model=model) if "gpt" in model.lower() else ChatAnthropic(model=model)
-  asana_chatbot_with_tools = asana_chatbot.bind_tools(tools)
+    if nested_calls > 5:
+        raise "AI is tool calling too much!"
 
-  stream = asana_chatbot_with_tools.stream(messages)
-  first = True
-  for chunk in stream:
-    if first:
-      gathered = chunk
-      first = False
-    else:
-      gathered = gathered + chunk
+    # First, prompt the AI with the latest user message
+    tools = [tool for _, tool in available_functions.items()]
+    asana_chatbot = ChatOpenAI(model=model) if "gpt" in model.lower() else ChatAnthropic(model=model)
+    asana_chatbot_with_tools = asana_chatbot.bind_tools(tools)
 
-    yield chunk
+    stream = asana_chatbot_with_tools.stream(messages)
+    first = True
+    for chunk in stream:
+        if first:
+            gathered = chunk
+            first = False
+        else:
+            gathered = gathered + chunk
 
-  has_tool_calls = len(gathered.tool_calls) > 0
+        yield chunk
 
-  # Second, see if the AI decided it needs to invoke a tool
-  if has_tool_calls:
-    # If the AI decided to invoke a tool, invoke it
-    available_functions = {
-        "create_asana_task": create_asana_task
-    }
+    has_tool_calls = len(gathered.tool_calls) > 0
 
-    # Add the tool request to the list of messages so the AI knows later it invoked the tool
-    messages.append(gathered)
+    # Second, see if the AI decided it needs to invoke a tool
+    if has_tool_calls:
+        # Add the tool request to the list of messages so the AI knows later it invoked the tool
+        messages.append(gathered)
 
-    # Next, for each tool the AI wanted to call, call it and add the tool result to the list of messages
-    for tool_call in gathered.tool_calls:
-      tool_name = tool_call["name"].lower()
-      selected_tool = available_functions[tool_name]
-      tool_output = selected_tool.invoke(tool_call["args"])
-      messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))
+        # If the AI decided to invoke a tool, invoke it
+        # For each tool the AI wanted to call, call it and add the tool result to the list of messages
+        for tool_call in gathered.tool_calls:
+            tool_name = tool_call["name"].lower()
+            selected_tool = available_functions[tool_name]
+            tool_output = selected_tool.invoke(tool_call["args"])
+            messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))                
 
-    # Call the AI again so it can produce a response with the result of calling the tool(s)
-    additional_stream = prompt_ai(messages, nested_calls + 1)
-    for additional_chunk in additional_stream:
-      yield additional_chunk
+        # Call the AI again so it can produce a response with the result of calling the tool(s)
+        additional_stream = prompt_ai(messages, nested_calls + 1)
+        for additional_chunk in additional_stream:
+            yield additional_chunk
 
 
 def main():
