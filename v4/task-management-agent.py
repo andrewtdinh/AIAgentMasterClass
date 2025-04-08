@@ -143,7 +143,34 @@ def get_asana_tasks(project_gid):
         return json.dumps(list(api_response), indent=2)
     except ApiException as e:
         return f"Exception when calling TasksApi -> get_tasks: {e}\n"
-    
+
+
+@tool
+def update_asana_task(task_gid, data):
+    """
+    Updates a task in Asana by updating one or both of completed and/or the due date
+
+    Example call:
+
+    update_asana_task("1207780961742158", {"completed": True, "due_on": "2024-07-13"})
+    Args:
+        task_gid (str): The ID of the task to update
+        data (dict): A dictionary with either one or both of the keys 'completed' and/or 'due_on'
+                    If given, completed needs to be either True or False.
+                    If given, the due date needs to be in the format 'YYYY-MM-DD'.
+    Returns:
+        str: The API response of updating the task or an error message if the API call threw an error
+    """      
+    # Data: {"completed": True or False, "due_on": "YYYY-MM-DD"}
+    body = {"data": data} # dict | The task to update.
+
+    try:
+        # Update a task
+        api_response = tasks_api_instance.update_task(body, task_gid, {})
+        return json.dumps(api_response, indent=2)
+    except ApiException as e:
+        return f"Exception when calling TasksApi -> update_task: {e}\n"
+
 
 def prompt_ai(messages, nested_calls=0):
   if nested_calls > 5:
