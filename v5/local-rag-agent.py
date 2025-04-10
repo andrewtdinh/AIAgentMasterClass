@@ -35,6 +35,34 @@ def get_local_model():
   #     },
   # )
 
+llm = get_local_model()
+
+def load_documents(directory):
+    # Load the PDF or txt documents from the directory
+    loader = DirectoryLoader(directory)
+    documents = loader.load()
+
+    # Split the documents into chunks
+    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    docs = text_splitter.split_documents(documents)
+
+    return docs
+
+
+@st.cache_resource
+def get_chroma_instance():
+  # Get the documents split into chunks
+  docs = load_documents(rag_directory)
+
+  # create the open-source embedding function
+  embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+
+  # load it into Chroma
+  return Chroma.from_documents(docs, embedding_function)
+
+db = get_chroma_instance()
+
+
 def main():
   st.title("Chat with Local Documents")
 
