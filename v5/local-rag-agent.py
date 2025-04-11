@@ -63,6 +63,24 @@ def get_chroma_instance():
 db = get_chroma_instance()
 
 
+def query_documents(question):
+  """
+  Uses RAG to query documents for information to answer a question
+
+  Example call:
+
+  query_documents("What are the action items from the meeting on the 20th?")
+  Args:
+      question (str): The question the user asked that might be answerable from the searchable documents
+  Returns:
+      str: The list of texts (and their sources) that matched with the question the closest using RAG
+  """
+  similar_docs = db.similarity_search(question, k=5)
+  docs_formatted = list(map(lambda doc: f"Source: {doc.metadata.get('source', 'NA')}\nContent: {doc.page_content}", similar_docs))
+
+  return docs_formatted
+
+
 def main():
   st.title("Chat with Local Documents")
 
