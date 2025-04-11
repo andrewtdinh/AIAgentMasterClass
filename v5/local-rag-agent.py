@@ -82,21 +82,52 @@ def query_documents(question):
 
 
 def prompt_ai(messages):
-    # Fetch the relevant documents for the query
-    user_prompt = messages[-1].content
-    retrieved_context = query_documents(user_prompt)
-    formatted_prompt = f"Context for answering the question:\n{retrieved_context}\nQuestion/user input:\n{user_prompt}"    
+  # Fetch the relevant documents for the query
+  user_prompt = messages[-1].content
+  retrieved_context = query_documents(user_prompt)
+  formatted_prompt = f"Context for answering the question:\n{retrieved_context}\nQuestion/user input:\n{user_prompt}"    
 
-    # Prompt the AI with the latest user message
-    doc_chatbot = ChatHuggingFace(llm=llm)
-    ai_response = doc_chatbot.invoke(messages[:-1] + [HumanMessage(content=formatted_prompt)])
+  # Prompt the AI with the latest user message
+  doc_chatbot = ChatHuggingFace(llm=llm)
+  ai_response = doc_chatbot.invoke(messages[:-1] + [HumanMessage(content=formatted_prompt)])
 
-    return ai_response
+  return ai_response
 
 
 
 def main():
   st.title("Chat with Local Documents")
 
+  # Initialize chat history
+  if "messages" not in st.session_state:
+    st.session_state.messages = [
+      SystemMessage(content=f"You are a personal assistant who answers questions based on the context provided if the provided context can answer the question. You only provide the answer to the question/user input and nothing else. The current date is: {datetime.now().date()}")
+    ]    
+
+  # Display chat messages from history on app rerun
+  for message in st.session_state.messages:
+    message_json = json.loads(message.json())
+    message_type = message_json["type"]
+    if message_type in ["human", "ai", "system"]:
+      with st.chat_message(message_type):
+        st.markdown(message_json["content"])        
+
+  # React to user input
+  # Example question: What's included in the wellness program Emily proposed?
+  # Example question 2: What were the results of the team survey?
+  # Example question 3: What was discussed in the meeting on the 22nd?
+  if prompt := st.chat_input("What questions do you have?"):
+    # Display user message in chat message container
+    st.chat_message("user").markdown(prompt)
+    # Add user message to chat history
+    st.session_state.messages.append(HumanMessage(content=prompt))
+
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+      ai_response = prompt_ai(st.session_state.messages)
+      st.markdown(ai_response.content)
+    
+    st.session_state.messages.append(ai_response)
+
 if __name__ == "__main__":
-  main()
+    main()
