@@ -81,6 +81,20 @@ def query_documents(question):
   return docs_formatted
 
 
+def prompt_ai(messages):
+    # Fetch the relevant documents for the query
+    user_prompt = messages[-1].content
+    retrieved_context = query_documents(user_prompt)
+    formatted_prompt = f"Context for answering the question:\n{retrieved_context}\nQuestion/user input:\n{user_prompt}"    
+
+    # Prompt the AI with the latest user message
+    doc_chatbot = ChatHuggingFace(llm=llm)
+    ai_response = doc_chatbot.invoke(messages[:-1] + [HumanMessage(content=formatted_prompt)])
+
+    return ai_response
+
+
+
 def main():
   st.title("Chat with Local Documents")
 
