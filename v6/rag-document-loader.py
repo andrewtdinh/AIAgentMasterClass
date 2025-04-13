@@ -21,5 +21,17 @@ def load_documents(directory):
 
     return docs
 
+
+def main():
+    # Get the documents split into chunks
+    docs = load_documents(rag_directory)
+
+    # Create the open-source embedding function
+    embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+
+    # Load the documents into Chroma and save it to the disk
+    Chroma.from_documents(docs, embedding_function, persist_directory="./chroma_db")
+
+
 if __name__ == "__main__":
     main()
