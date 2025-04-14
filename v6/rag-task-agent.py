@@ -11,7 +11,8 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, AIMessage, HumanMessage, ToolMessage
-from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
+# from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_chroma import Chroma
@@ -40,66 +41,12 @@ workspace_gid = os.getenv("ASANA_WORKPLACE_ID", "")
 @st.cache_resource
 def get_chroma_instance():
     # Create the open-source embedding function
-    embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+    embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
     # Get the Chroma instance from what is saved to the disk
     return Chroma(persist_directory="./chroma_db", embedding_function=embedding_function)
 
 db = get_chroma_instance() 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~ AI Agent Tool Functions ~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-@st.cache_resource
-def get_local_model():
-  return HuggingFaceEndpoint(
-    repo_id=model,
-    task="text-generation",
-    max_new_tokens=1024,
-    do_sample=False
-  )
-
-  # If you want to run the model absolutely locally - VERY resource intense!
-  # return HuggingFacePipeline.from_model_id(
-  #     model_id=model,
-  #     task="text-generation",
-  #     pipeline_kwargs={
-  #         "max_new_tokens": 1024,
-  #         "top_k": 50,
-  #         "temperature": 0.4
-  #     },
-  # )
-
-llm = get_local_model()
-
-
-def load_documents(directory):
-    # Load the PDF or txt documents from the directory
-    loader = DirectoryLoader(directory)
-    documents = loader.load()
-
-    # Split the documents into chunks
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-    docs = text_splitter.split_documents(documents)
-
-    return docs
-
-
-@st.cache_resource
-def get_chroma_instance():
-  # Get the documents split into chunks
-  docs = load_documents(rag_directory)
-
-  # create the open-source embedding function
-  embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-
-  # load it into Chroma
-  return Chroma.from_documents(docs, embedding_function)
-
-db = get_chroma_instance()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
