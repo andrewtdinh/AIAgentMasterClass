@@ -339,40 +339,50 @@ def prompt_ai(messages, nested_calls=0):
         for additional_chunk in additional_stream:
             yield additional_chunk
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~ Main Function with UI Creation ~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+system_message = f"""
+You are a personal assistant who helps manage tasks in Asana. 
+You never give IDs to the user since those are just for you to keep track of. 
+When a user asks to create a task and you don't know the project to add it to for sure, clarify with the user.
+The current date is: {datetime.now().date()}
+"""
 
 def main():
-  st.title("Chat with Local Documents")
+    st.title("Asana Chatbot")
 
-  # Initialize chat history
-  if "messages" not in st.session_state:
-    st.session_state.messages = [
-      SystemMessage(content=f"You are a personal assistant who answers questions based on the context provided if the provided context can answer the question. You only provide the answer to the question/user input and nothing else. The current date is: {datetime.now().date()}")
-    ]    
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = [
+            SystemMessage(content=system_message)
+        ]    
 
-  # Display chat messages from history on app rerun
-  for message in st.session_state.messages:
-    message_json = json.loads(message.json())
-    message_type = message_json["type"]
-    if message_type in ["human", "ai", "system"]:
-      with st.chat_message(message_type):
-        st.markdown(message_json["content"])        
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        message_json = json.loads(message.json())
+        message_type = message_json["type"]
+        if message_type in ["human", "ai", "system"]:
+            with st.chat_message(message_type):
+                st.markdown(message_json["content"])        
 
-  # React to user input
-  # Example question: What's included in the wellness program Emily proposed?
-  # Example question 2: What were the results of the team survey?
-  # Example question 3: What was discussed in the meeting on the 22nd?
-  if prompt := st.chat_input("What questions do you have?"):
-    # Display user message in chat message container
-    st.chat_message("user").markdown(prompt)
-    # Add user message to chat history
-    st.session_state.messages.append(HumanMessage(content=prompt))
+    # React to user input
+    if prompt := st.chat_input("What would you like to do today?"):
+        # Display user message in chat message container
+        st.chat_message("user").markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append(HumanMessage(content=prompt))
 
-    # Display assistant response in chat message container
-    with st.chat_message("assistant"):
-      ai_response = prompt_ai(st.session_state.messages)
-      st.markdown(ai_response.content)
-    
-    st.session_state.messages.append(ai_response)
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            stream = prompt_ai(st.session_state.messages)
+            response = st.write_stream(stream)
+        
+        st.session_state.messages.append(AIMessage(content=response))
+
 
 if __name__ == "__main__":
     main()
