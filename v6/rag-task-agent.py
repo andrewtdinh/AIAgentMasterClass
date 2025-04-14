@@ -293,18 +293,51 @@ available_functions = {
     "query_documents": query_documents
 }     
 
-def prompt_ai(messages):
-  # Fetch the relevant documents for the query
-  user_prompt = messages[-1].content
-  retrieved_context = query_documents(user_prompt)
-  formatted_prompt = f"Context for answering the question:\n{retrieved_context}\nQuestion/user input:\n{user_prompt}"    
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~ AI Prompting Function ~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  # Prompt the AI with the latest user message
-  doc_chatbot = ChatHuggingFace(llm=llm)
-  ai_response = doc_chatbot.invoke(messages[:-1] + [HumanMessage(content=formatted_prompt)])
+def prompt_ai(messages, nested_calls=0):
+    if nested_calls > 5:
+        raise "AI is tool calling too much!"
 
-  return ai_response
+    # First, prompt the AI with the latest user message
+    tools = [tool for _, tool in available_functions.items()]
+    asana_chatbot = ChatOpenAI(model=model) if "gpt" in model.lower() else ChatAnthropic(model=model)
+    asana_chatbot_with_tools = asana_chatbot.bind_tools(tools)
 
+    stream = asana_chatbot_with_tools.stream(messages)
+    first = True
+    for chunk in stream:
+        if first:
+            gathered = chunk
+            first = False
+        else:
+            gathered = gathered + chunk
+
+        yield chunk
+
+    has_tool_calls = len(gathered.tool_calls) > 0
+
+    # Second, see if the AI decided it needs to invoke a tool
+    if has_tool_calls:
+        # Add the tool request to the list of messages so the AI knows later it invoked the tool
+        messages.append(gathered)
+
+        # If the AI decided to invoke a tool, invoke it
+        # For each tool the AI wanted to call, call it and add the tool result to the list of messages
+        for tool_call in gathered.tool_calls:
+            tool_name = tool_call["name"].lower()
+            selected_tool = available_functions[tool_name]
+            tool_output = selected_tool.invoke(tool_call["args"])
+            messages.append(ToolMessage(tool_output, tool_call_id=tool_call["id"]))                
+
+        # Call the AI again so it can produce a response with the result of calling the tool(s)
+        additional_stream = prompt_ai(messages, nested_calls + 1)
+        for additional_chunk in additional_stream:
+            yield additional_chunk
 
 
 def main():
