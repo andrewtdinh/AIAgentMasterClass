@@ -262,24 +262,36 @@ def delete_task(task_gid):
     except ApiException as e:
         return "Exception when calling TasksApi->delete_task: %s\n" % e   
 
-
+@tool
 def query_documents(question):
-  """
-  Uses RAG to query documents for information to answer a question
+    """
+    Uses RAG to query documents for information to answer a question
+    that requires specific context that could be found in documents
 
-  Example call:
+    Example call:
 
-  query_documents("What are the action items from the meeting on the 20th?")
-  Args:
-      question (str): The question the user asked that might be answerable from the searchable documents
-  Returns:
-      str: The list of texts (and their sources) that matched with the question the closest using RAG
-  """
-  similar_docs = db.similarity_search(question, k=5)
-  docs_formatted = list(map(lambda doc: f"Source: {doc.metadata.get('source', 'NA')}\nContent: {doc.page_content}", similar_docs))
+    query_documents("What are the action items from the meeting on the 20th?")
+    Args:
+        question (str): The question the user asked that might be answerable from the searchable documents
+    Returns:
+        str: The list of texts (and their sources) that matched with the question the closest using RAG
+    """
+    similar_docs = db.similarity_search(question, k=3)
+    docs_formatted = list(map(lambda doc: f"Source: {doc.metadata.get('source', 'NA')}\nContent: {doc.page_content}", similar_docs))
 
-  return docs_formatted
+    return str(docs_formatted) 
 
+# Maps the function names to the actual function object in the script
+# This mapping will also be used to create the list of tools to bind to the agent
+available_functions = {
+    "create_asana_task": create_asana_task,
+    "get_asana_projects": get_asana_projects,
+    "create_asana_project": create_asana_project,
+    "get_asana_tasks": get_asana_tasks,
+    "update_asana_task": update_asana_task,
+    "delete_task": delete_task,
+    "query_documents": query_documents
+}     
 
 def prompt_ai(messages):
   # Fetch the relevant documents for the query
