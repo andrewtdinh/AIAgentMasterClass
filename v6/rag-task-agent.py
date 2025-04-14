@@ -21,6 +21,16 @@ load_dotenv()
 model = os.getenv('LLM_MODEL', 'meta-llama/Meta-Llama-3.1-405B-Instruct')
 rag_directory = os.getenv('DIRECTORY', 'meeting_notes')
 
+configuration = asana.Configuration()
+configuration.access_token = os.getenv('ASANA_ACCESS_TOKEN', '')
+api_client = asana.ApiClient(configuration)
+
+# create an instance of the different Asana API classes
+projects_api_instance = asana.ProjectsApi(api_client)
+tasks_api_instance = asana.TasksApi(api_client)
+
+workspace_gid = os.getenv("ASANA_WORKPLACE_ID", "")
+
 @st.cache_resource
 def get_local_model():
   return HuggingFaceEndpoint(
