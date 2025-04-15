@@ -1,4 +1,5 @@
 ## Version 6
+Here is the [youtube tutorial video](https://www.youtube.com/watch?v=7dKQPbSXiB8&list=PLyrg3m7Ei-MpsdEA6eKN1k2gJpuhllNTi&index=7)
 
 This is a local RAG agent plus additional capabilities.
 To run the agent, activate the virtual environment, navigate into the v6 folder, install dependencies, and execute the below commands in order:
