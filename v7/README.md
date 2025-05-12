@@ -2,7 +2,8 @@
 Here is the [youtube tutorial video](https://www.youtube.com/watch?v=w_HeP0A2MF8&t=314s) for this AI Agent 
 version.
 
-This is a local RAG agent plus additional capabilities.
+This is a local RAG agent plus additional capabilities. This version supposedly cleans up the code from version 6 by introducing LangGraph.
+
 To run the agent, activate the virtual environment, navigate into the v7 folder, install dependencies, and execute the below commands in order:
 
 1. To generate a local chroma storage:
